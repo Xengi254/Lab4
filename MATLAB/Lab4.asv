@@ -15,7 +15,7 @@ for i=1:length(t)-1
 end
 %[text] Determine the average speed, $c$, of end effector over `tfinal` seconds.
 % TODO: replace tfinal with your code
-tfinal = 6;
+tfinal = 5;
 
 % calculate average speed
 c = d/tfinal;
