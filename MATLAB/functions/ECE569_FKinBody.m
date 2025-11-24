@@ -24,6 +24,8 @@ function T = ECE569_FKinBody(M, Blist, thetalist)
 
 T = M;
 for i = 1: size(thetalist)
-    % T = T * ...
+    BT = ECE569_VecTose3(Blist(:,i))*thetalist(i);
+    eBT= ECE569_MatrixExp6(BT);
+    T = T * eBT;
 end
 end

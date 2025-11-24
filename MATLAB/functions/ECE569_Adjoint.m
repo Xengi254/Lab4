@@ -17,5 +17,5 @@ function AdT = ECE569_Adjoint(T)
 %     3     0     0     0     0    -1
 %     0     0     0     0     1     0
 [R, p] = ECE569_TransToRp(T);
-% AdT = ... TODO
+ AdT = [R,zeros(3,3);ECE569_VecToso3(p)*R,R];
 end

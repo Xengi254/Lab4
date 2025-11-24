@@ -21,10 +21,18 @@ function T = ECE569_MatrixExp6(se3mat)
 
 omgtheta = ECE569_so3ToVec(se3mat(1: 3, 1: 3));
 if ECE569_NearZero(norm(omgtheta))
-    % T = ...
+     T = [1,0,0,se3mat(1,4);0,1,0,se3mat(2,4);0,0,1,se3mat(3,4);0,0,0,1];
 else
-    [~, theta] = ECE569_AxisAng3(omgtheta);
-    omgmat = se3mat(1: 3, 1: 3) / theta; 
-    % T = ...
+    [omg, theta] = ECE569_AxisAng3(omgtheta);
+
+    omghat = ECE569_VecToso3(omg);
+
+    v=se3mat(1:3,4)/theta;
+
+    R=ECE569_MatrixExp3(omghat*theta);
+
+    p=(eye(3)-R)*(omghat*v)/(norm(omg)^2)+(omg*(transpose(omg)*v)*theta)/(norm(omg)^2);
+
+     T = [R,p;0,0,0,1];
 end
-end
+%end

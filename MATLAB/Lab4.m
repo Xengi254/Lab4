@@ -15,7 +15,8 @@ for i=1:length(t)-1
 end
 %[text] Determine the average speed, $c$, of end effector over `tfinal` seconds.
 % TODO: replace tfinal with your code
-tfinal = 6;
+tfinal = 15;
+ta=1.5;
 
 % calculate average speed
 c = d/tfinal;
@@ -27,10 +28,10 @@ dt = 0.002;
 t = 0:dt:tfinal;
 alpha = zeros(size(t));
 for i=1:length(t)-1
-    % xdot = ...
-    % ydot = ...
+     xdot = 0.48*cos(4*alpha(i));
+     ydot = 0.48*cos(6*alpha(i));
     % equation (7) in the lab assignment
-    % alpha(i+1) = alpha(i) + ...
+     alpha(i+1) = alpha(i) + dt*(c*g(t(i),tfinal,ta))/sqrt((xdot)^2+(ydot)^2);
 end
 
 plot(t,alpha,'LineWidth',2); title('Plot of \alpha(t)');
@@ -39,8 +40,8 @@ yline(T,'k--','LineWidth',2);
 legend('\alpha','T (period)','Location','southeast')
 %[text] (1c) Combine all trajectories together.
 % TODO: replace with your own lissajous curve
-% x = 0.16*sin(alpha);
-% y = 0.08*sin(2*alpha);
+ x = 0.12*sin(4*alpha);
+ y = 0.08*sin(6*alpha);
 %[text] Plot the speed of the trajectory as function of time.
 v = sqrt( (diff(x)/dt).^2 + (diff(y)/dt).^2 );
 plot(dt:dt:tfinal,v,'LineWidth',3); hold on;
@@ -53,7 +54,7 @@ grid on;
 xlabel('time (s)')
 ylabel('velocity (m/s)')
 legend('velocity', 'average velocity', 'velocity limit','Location','south')
-%%
+
 %[text] ## Step 2: Forward Kinematics
 %[text] (2c) Calculate T0
 % these values were obtained from the URDF directly
@@ -95,19 +96,25 @@ theta0 = [-1.6800   -1.4018   -1.8127   -2.9937   -0.8857   -0.0696]';
 % from end effector frame {b} to the base frame {s} at t=0: Tsb(0)
 
 % TODO: implement ECE569_FKinSpace and ECE569_FKinBody
-T0_space = ECE569_FKinSpace(M,S,theta0)
-T0_body = ECE569_FKinBody(M,B,theta0)
-T0_space-T0_body
+T0_space = ECE569_FKinSpace(M,S,theta0);
+T0_body = ECE569_FKinBody(M,B,theta0);
+T0_space-T0_body;
 T0 = T0_body;
 %[text] Calculate Tsd at every time step.
 % Calculate Tsd(t) for t=0 to t=tfinal
 % Tsd(t) = T0 * Td(t)
 N = length(t);
 Tsd = zeros(4,4,N);
+t=0:0.002:15;
+Rd = eye(3);
+
 for i=1:N
-    % Tsd(:,:,i) = ...
+    pd=[0.12*sin(4*alpha(i)); 0.08*sin(6*alpha(i));0];
+    Td=[Rd,pd;0,0,0,1];
+    Tsd(:,:,i) = T0*Td;
 end
-%%
+
+
 %[text] (2d) Plot (x,y,z) in the s frame
 xs = Tsd(1,4,:);
 ys = Tsd(2,4,:);
@@ -123,7 +130,7 @@ plot3(xs(end),ys(end),zs(end),'rx','MarkerSize',10,'LineWidth',2)
 legend('Trajectory', 'Start', 'End')
 grid on
 hold off
-%%
+
 %[text] ## Step 3: Inverse Kinematics
 initialguess = theta0;
 Td = T0;
@@ -134,10 +141,10 @@ if (~success)
     close(f);
     error('Error. \nCould not perform IK at index %d.',1)
 end
-%%
+
 %[text] (3c) Perform IK at each time step
 thetaAll = zeros(6,N);
-thetaAll(:,1) = theta0;
+thetaAll(:,1) = thetaSol;
 
 % you can comment out the waitbar functions if they aren't working
 % (sometimes they don't work with .mlx files)
@@ -146,10 +153,10 @@ f = waitbar(0,['Inverse Kinematics (1/',num2str(N),') complete.']);
 
 for i=2:N
     % TODO: use previous solution as current guess
-    % initialguess = ...
+     initialguess = thetaAll(:,i-1);
 
     % TODO: calculate thetaSol for Tsd(:,:,i) with initial guess
-    % [thetaSol, success] = ...
+    [thetaSol, success] = ECE569_IKinBody(B,M,Tsd(:,:,i),initialguess,1e-6,1e-6);
     if (~success)
         close(f);
         error('Error. \nCould not perform IK at index %d.',i)
@@ -158,7 +165,7 @@ for i=2:N
     waitbar(i/N,f,['Inverse Kinematics (',num2str(i),'/',num2str(N),') complete.']);
 end
 close(f);
-%%
+
 %[text] (3c) Verify that the joint angles don't change very much
 dj = diff(thetaAll');
 plot(t(1:end-1), dj)
@@ -167,12 +174,12 @@ legend('J1','J2','J3','J4','J5','J6','Location','northeastoutside')
 grid on
 xlabel('time (s)')
 ylabel('first order difference')
-%%
+
 %[text] (3d) Verify that the joints we found actually trace out our trajectory (forward kinematics)
 actualTsd = zeros(4,4,N);
 for i=1:N
     % TODO: use forward kinematics to calculate Tsd from our thetaAll
-    % actualTsd(:,:,i) = ... 
+    actualTsd(:,:,i) =  ECE569_FKinBody(M,B,thetaAll(:,i));
 end
 
 xs = actualTsd(1,4,:);
@@ -189,18 +196,19 @@ plot3(xs(end),ys(end),zs(end),'rx','MarkerSize',10,'LineWidth',2)
 legend('Trajectory', 'Start', 'End')
 grid on
 hold off
-%%
+
 %[text] (3e) Verify that the end effector does not enter a kinematic singularity, by plotting the determinant of your body jacobian
 body_dets = zeros(N,1);
 for i=1:N
-    body_dets(i) = det(...);
+    Jb = ECE569_JacobianBody(B, thetaAll(:,i));
+    body_dets(i) = det(Jb);
 end
 plot(t, body_dets)
 title('Manipulability')
 grid on
 xlabel('time (s)')
 ylabel('det of J_B')
-%%
+
 %[text] (3f) Save to CSV File
 % you can play with turning the LEDs on and off
 led = ones(N,1);
@@ -209,7 +217,7 @@ led = ones(N,1);
 data = [t' thetaAll' led];
 
 % TODO: change the csv filename to your purdue ID
-% writematrix(data, 'ldihel.csv')
+writematrix(data, '039613796.csv')
 
 %[appendix]{"version":"1.0"}
 %---

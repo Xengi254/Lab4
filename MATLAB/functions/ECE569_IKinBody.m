@@ -47,14 +47,24 @@ i = 0;
 maxiterations = 20;
 % TODO: calculate Vb
 % Hint: you will need to use four of the ECE569 functions from earlier
-% Vb = ...
+Tsb = ECE569_FKinBody(M, Blist, thetalist);
+Tbd = ECE569_TransInv(Tsb) * T;
+Vb  = ECE569_se3ToVec(ECE569_MatrixLog6(Tbd));
 err = norm(Vb(1: 3)) > eomg || norm(Vb(4: 6)) > ev;
 while err && i < maxiterations
     % TODO: update thetalist
     % Hint: the psuedo-inverse is given in MATLAB by pinv()
     % thetalist = thetalist + ...
+    Jb = ECE569_JacobianBody(Blist,thetalist);
+
+    % since the numerical psudo Transpose result in NAN pinv is used
+    thetalist = thetalist + pinv(Jb) * Vb;  
+
     i = i + 1;
-    % Vb = ...
+
+    Tsb = ECE569_FKinBody(M, Blist, thetalist);
+    Tbd = ECE569_TransInv(Tsb) * T;
+    Vb  = ECE569_se3ToVec(ECE569_MatrixLog6(Tbd));
     err = norm(Vb(1: 3)) > eomg || norm(Vb(4: 6)) > ev;
 end
 success = ~ err;
